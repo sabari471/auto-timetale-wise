@@ -2,13 +2,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DashboardStats from '@/components/dashboard/DashboardStats';
+import TimetableGrid from '@/components/timetable/TimetableGrid';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, RefreshCw, Download } from 'lucide-react';
+import { useTimetable } from '@/hooks/useTimetable';
+import { Calendar, Plus, RefreshCw, Download, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
+  const { timetables, loading: timetableLoading, generateTimetable } = useTimetable();
 
   if (loading) {
     return (
@@ -57,6 +60,18 @@ const Index = () => {
 
   const { title, subtitle, actions } = getRoleGreeting();
 
+  const handleGenerateTimetable = async () => {
+    try {
+      await generateTimetable({
+        algorithm: 'genetic',
+        max_iterations: 500,
+        population_size: 30
+      });
+    } catch (error) {
+      console.error('Failed to generate timetable:', error);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -70,8 +85,18 @@ const Index = () => {
           </div>
           <div className="flex gap-3">
             {actions.map((action, index) => (
-              <Button key={index} variant={action.variant} className="gap-2">
-                <action.icon className="h-4 w-4" />
+              <Button 
+                key={index} 
+                variant={action.variant} 
+                className="gap-2"
+                onClick={action.label === 'Generate Timetable' ? handleGenerateTimetable : undefined}
+                disabled={action.label === 'Generate Timetable' ? timetableLoading : false}
+              >
+                {action.label === 'Generate Timetable' && timetableLoading ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <action.icon className="h-4 w-4" />
+                )}
                 {action.label}
               </Button>
             ))}
@@ -80,6 +105,9 @@ const Index = () => {
 
         {/* Dashboard Stats */}
         <DashboardStats role={profile?.role || 'student'} />
+
+        {/* Timetable Grid */}
+        <TimetableGrid timetables={timetables} loading={timetableLoading} />
 
         {/* Recent Activity / Quick Actions */}
         <div className="grid gap-6 lg:grid-cols-2">

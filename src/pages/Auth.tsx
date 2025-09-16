@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Calendar, Clock, Users, BookOpen, GraduationCap, Chrome } from 'lucide-react';
+import heroImage from '@/assets/hero-timetable.jpg';
 
 const Auth = () => {
   const { user, loading, signUp, signIn, signInWithOAuth } = useAuth();

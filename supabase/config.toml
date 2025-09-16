@@ -1,1 +1,4 @@
 project_id = "erzycacznhlzjdcxrvtr"
+
+[functions.generate-timetable]
+verify_jwt = false
