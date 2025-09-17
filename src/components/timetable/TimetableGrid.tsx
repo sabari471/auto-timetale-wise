@@ -9,9 +9,9 @@ interface TimetableGridProps {
 }
 
 const TimetableGrid = ({ timetables, loading }: TimetableGridProps) => {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday','Saturday'];
   const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+    '08:45', '09:25', '10:25', '11:35', '12:25', '13:25', '2:15', '15:05', '16:15'
   ];
 
   const getTimetableForSlot = (day: number, time: string) => {
