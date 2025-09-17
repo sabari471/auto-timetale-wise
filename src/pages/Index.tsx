@@ -11,7 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
-  const { timetables, loading: timetableLoading, generateTimetable } = useTimetable();
+  const { 
+    timetables, 
+    loading: timetableLoading, 
+    generateTimetable,
+    refreshData 
+  } = useTimetable();
 
   if (loading) {
     return (

@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Bell, Settings, LogOut, Calendar, Users, BookOpen, BarChart3, Clock, Menu } from 'lucide-react';
+import { Bell, Settings, LogOut, Calendar, Users, BookOpen, BarChart3, Clock, Menu, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -28,9 +28,11 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { icon: Calendar, label: 'Timetables', href: '/timetables' },
+  { icon: Calendar, label: 'Timetables', href: '/' },
   { icon: BookOpen, label: 'Courses', href: '/courses', roles: ['admin', 'faculty'] },
   { icon: Users, label: 'Faculty', href: '/faculty', roles: ['admin'] },
+  { icon: GraduationCap, label: 'Batches', href: '/batches', roles: ['admin'] },
+  { icon: BookOpen, label: 'Assignments', href: '/assignments', roles: ['admin'] },
   { icon: Clock, label: 'Leaves', href: '/leaves', roles: ['admin', 'faculty'] },
   { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['admin'] },
   { icon: Settings, label: 'Settings', href: '/settings', roles: ['admin'] },
@@ -93,7 +95,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 key={item.href}
                 variant="ghost"
                 className="w-full justify-start gap-3 h-11"
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  setSidebarOpen(false);
+                  window.location.href = item.href;
+                }}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
