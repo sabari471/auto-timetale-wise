@@ -60,7 +60,7 @@ const TimetableGrid = ({ timetables, loading }: TimetableGridProps) => {
         <div className="overflow-x-auto">
           <div className="min-w-[800px]">
             {/* Header */}
-            <div className="grid grid-cols-6 bg-muted/50">
+            <div className="grid grid-cols-7 bg-muted/50">
               <div className="p-4 font-semibold border-r border-border">Time</div>
               {days.map(day => (
                 <div key={day} className="p-4 font-semibold text-center border-r border-border last:border-r-0">
@@ -72,7 +72,7 @@ const TimetableGrid = ({ timetables, loading }: TimetableGridProps) => {
             {/* Time slots */}
             {timeSlots.map((time, timeIndex) => (
               <div key={time} className={cn(
-                "grid grid-cols-6 border-b border-border",
+                "grid grid-cols-7 border-b border-border",
                 timeIndex % 2 === 0 ? "bg-background" : "bg-muted/30"
               )}>
                 <div className="p-4 font-medium text-muted-foreground border-r border-border">
