@@ -113,29 +113,43 @@ export const useTimetable = () => {
     try {
       setLoading(true);
       
-      const response = await supabase.functions.invoke('generate-timetable', {
-        body: {
+      // Call the edge function directly with fetch
+      const response = await fetch(`https://erzycacznhlzjdcxrvtr.supabase.co/functions/v1/generate-timetable`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyenljYWN6bmhsempkY3hydnRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMTQzNzksImV4cCI6MjA3MzU5MDM3OX0.-lOYgXyVEVwYDe2aNw7OiT5rqN0YSPjPxfmMAfvX1vY`,
+        },
+        body: JSON.stringify({
           academic_year: '2024-25',
           semester: 1,
           config
-        }
+        }),
       });
 
-      if (response.error) throw response.error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate timetable');
+      }
 
       toast({
         title: "Success",
-        description: "Timetable generated successfully!",
+        description: `Timetable generated successfully! ${data.scheduled_count} courses scheduled.`,
         variant: "default",
       });
 
       // Refresh runs and set new active run
       await fetchRuns();
-      if (response.data?.run_id) {
-        setActiveRun(response.data.run_id);
+      if (data.run_id) {
+        setActiveRun(data.run_id);
       }
 
-      return response.data;
+      return data;
     } catch (error: any) {
       console.error('Error generating timetable:', error);
       toast({
