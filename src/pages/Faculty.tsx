@@ -2,12 +2,38 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -21,11 +47,16 @@ interface Faculty {
   specialization: string[];
   max_hours_per_week: number;
   is_active: boolean;
+  department_id: string | null;
   profile: {
     full_name: string;
     email: string;
     phone: string;
   };
+  departments?: {
+    name: string;
+    code: string;
+  } | null;
 }
 
 interface Department {
@@ -39,6 +70,7 @@ const Faculty = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
   const [formData, setFormData] = useState({
@@ -49,7 +81,7 @@ const Faculty = () => {
     designation: '',
     specialization: '',
     max_hours_per_week: 40,
-    department_id: ''
+    department_id: '',
   });
 
   useEffect(() => {
@@ -61,19 +93,22 @@ const Faculty = () => {
     try {
       const { data, error } = await supabase
         .from('faculty')
-        .select(`
+        .select(
+          `
           *,
-          profile:profiles(full_name, email, phone)
-        `)
+          profile:profiles(full_name, email, phone),
+          departments(name, code)
+        `
+        )
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setFaculty(data || []);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to fetch faculty",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch faculty',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -96,33 +131,45 @@ const Faculty = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setSubmitting(true);
+
     try {
       if (editingFaculty) {
-        // Update existing faculty
-        // Update faculty record only - profile updates require special handling
+        // Update faculty record
         const { error: facultyError } = await supabase
           .from('faculty')
           .update({
             employee_id: formData.employee_id,
             designation: formData.designation,
-            specialization: formData.specialization.split(',').map(s => s.trim()),
+            specialization: formData.specialization
+              ? formData.specialization.split(',').map((s) => s.trim())
+              : [],
             max_hours_per_week: formData.max_hours_per_week,
-            department_id: formData.department_id || null
+            department_id: formData.department_id || null,
           })
           .eq('id', editingFaculty.id);
 
         if (facultyError) throw facultyError;
 
+        // Update related profile info
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: formData.full_name,
+            phone: formData.phone,
+          })
+          .eq('email', formData.email);
+
+        if (profileError) throw profileError;
 
         toast({
-          title: "Success",
-          description: "Faculty updated successfully",
+          title: 'Success',
+          description: 'Faculty updated successfully',
         });
       } else {
-        // For new faculty, we create a temporary user_id (admin should handle user creation separately)
+        // Insert profile first (using temp user_id for now)
         const tempUserId = crypto.randomUUID();
-        
+
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -130,30 +177,32 @@ const Faculty = () => {
             email: formData.email,
             full_name: formData.full_name,
             phone: formData.phone,
-            role: 'faculty'
+            role: 'faculty',
           })
           .select()
           .single();
 
         if (profileError) throw profileError;
 
-        // Then create faculty record
-        const { error: facultyError } = await supabase
-          .from('faculty')
-          .insert([{
+        // Insert faculty record
+        const { error: facultyError } = await supabase.from('faculty').insert([
+          {
             profile_id: profileData.id,
             employee_id: formData.employee_id,
             designation: formData.designation,
-            specialization: formData.specialization.split(',').map(s => s.trim()),
+            specialization: formData.specialization
+              ? formData.specialization.split(',').map((s) => s.trim())
+              : [],
             max_hours_per_week: formData.max_hours_per_week,
-            department_id: formData.department_id || null
-          }]);
+            department_id: formData.department_id || null,
+          },
+        ]);
 
         if (facultyError) throw facultyError;
 
         toast({
-          title: "Success",
-          description: "Faculty created successfully",
+          title: 'Success',
+          description: 'Faculty created successfully',
         });
       }
 
@@ -163,10 +212,12 @@ const Faculty = () => {
       fetchFaculty();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save faculty",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to save faculty',
+        variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -180,7 +231,7 @@ const Faculty = () => {
       designation: facultyMember.designation || '',
       specialization: facultyMember.specialization?.join(', ') || '',
       max_hours_per_week: facultyMember.max_hours_per_week,
-      department_id: ''
+      department_id: facultyMember.department_id || '',
     });
     setIsDialogOpen(true);
   };
@@ -189,22 +240,19 @@ const Faculty = () => {
     if (!confirm('Are you sure you want to delete this faculty member?')) return;
 
     try {
-      const { error } = await supabase
-        .from('faculty')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('faculty').delete().eq('id', id);
 
       if (error) throw error;
       toast({
-        title: "Success",
-        description: "Faculty deleted successfully",
+        title: 'Success',
+        description: 'Faculty deleted successfully',
       });
       fetchFaculty();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to delete faculty",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to delete faculty',
+        variant: 'destructive',
       });
     }
   };
@@ -218,7 +266,7 @@ const Faculty = () => {
       designation: '',
       specialization: '',
       max_hours_per_week: 40,
-      department_id: ''
+      department_id: '',
     });
   };
 
@@ -242,11 +290,16 @@ const Faculty = () => {
               Manage faculty members and their information
             </p>
           </div>
-          
+
           {profile?.role === 'admin' && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => { resetForm(); setEditingFaculty(null); }}>
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setEditingFaculty(null);
+                  }}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Faculty
                 </Button>
@@ -257,7 +310,9 @@ const Faculty = () => {
                     {editingFaculty ? 'Edit Faculty' : 'Add New Faculty'}
                   </DialogTitle>
                   <DialogDescription>
-                    {editingFaculty ? 'Update faculty information' : 'Add a new faculty member to the system'}
+                    {editingFaculty
+                      ? 'Update faculty information'
+                      : 'Add a new faculty member to the system'}
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -267,18 +322,28 @@ const Faculty = () => {
                       <Input
                         id="full_name"
                         value={formData.full_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            full_name: e.target.value,
+                          }))
+                        }
                         placeholder="e.g., Dr. John Smith"
                         required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="employee_id">Employee ID</Label>
                       <Input
                         id="employee_id"
                         value={formData.employee_id}
-                        onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            employee_id: e.target.value,
+                          }))
+                        }
                         placeholder="e.g., FAC001"
                         required
                       />
@@ -291,7 +356,12 @@ const Faculty = () => {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                       placeholder="john.smith@university.edu"
                       disabled={!!editingFaculty}
                       required
@@ -304,23 +374,42 @@ const Faculty = () => {
                       <Input
                         id="phone"
                         value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="designation">Designation</Label>
-                      <Select value={formData.designation} onValueChange={(value) => setFormData(prev => ({ ...prev, designation: value }))}>
+                      <Select
+                        value={formData.designation}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            designation: value,
+                          }))
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select designation" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Professor">Professor</SelectItem>
-                          <SelectItem value="Associate Professor">Associate Professor</SelectItem>
-                          <SelectItem value="Assistant Professor">Assistant Professor</SelectItem>
+                          <SelectItem value="Associate Professor">
+                            Associate Professor
+                          </SelectItem>
+                          <SelectItem value="Assistant Professor">
+                            Assistant Professor
+                          </SelectItem>
                           <SelectItem value="Lecturer">Lecturer</SelectItem>
-                          <SelectItem value="Senior Lecturer">Senior Lecturer</SelectItem>
+                          <SelectItem value="Senior Lecturer">
+                            Senior Lecturer
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -331,7 +420,12 @@ const Faculty = () => {
                     <Input
                       id="specialization"
                       value={formData.specialization}
-                      onChange={(e) => setFormData(prev => ({ ...prev, specialization: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          specialization: e.target.value,
+                        }))
+                      }
                       placeholder="e.g., Machine Learning, Data Structures"
                     />
                   </div>
@@ -344,17 +438,55 @@ const Faculty = () => {
                       min="1"
                       max="60"
                       value={formData.max_hours_per_week}
-                      onChange={(e) => setFormData(prev => ({ ...prev, max_hours_per_week: parseInt(e.target.value) }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          max_hours_per_week: parseInt(e.target.value),
+                        }))
+                      }
                       required
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Select
+                      value={formData.department_id}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          department_id: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name} ({dept.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit">
-                      {editingFaculty ? 'Update' : 'Create'} Faculty
+                    <Button type="submit" disabled={submitting}>
+                      {submitting
+                        ? 'Saving...'
+                        : editingFaculty
+                        ? 'Update'
+                        : 'Create'}{' '}
+                      Faculty
                     </Button>
                   </div>
                 </form>
@@ -381,6 +513,7 @@ const Faculty = () => {
                   <TableHead>Employee ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Designation</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Max Hours/Week</TableHead>
                   <TableHead>Status</TableHead>
                   {profile?.role === 'admin' && <TableHead>Actions</TableHead>}
@@ -389,23 +522,44 @@ const Faculty = () => {
               <TableBody>
                 {faculty.map((facultyMember) => (
                   <TableRow key={facultyMember.id}>
-                    <TableCell className="font-medium">{facultyMember.profile.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {facultyMember.profile.full_name}
+                    </TableCell>
                     <TableCell>{facultyMember.employee_id}</TableCell>
                     <TableCell>{facultyMember.profile.email}</TableCell>
                     <TableCell>{facultyMember.designation}</TableCell>
-                    <TableCell>{facultyMember.max_hours_per_week}</TableCell>
                     <TableCell>
-                      <Badge variant={facultyMember.is_active ? "default" : "secondary"}>
-                        {facultyMember.is_active ? "Active" : "Inactive"}
+                      {facultyMember.departments
+                        ? `${facultyMember.departments.name} (${facultyMember.departments.code})`
+                        : '—'}
+                    </TableCell>
+                    <TableCell>
+                      {facultyMember.max_hours_per_week}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          facultyMember.is_active ? 'default' : 'secondary'
+                        }
+                      >
+                        {facultyMember.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
                     {profile?.role === 'admin' && (
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(facultyMember)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(facultyMember)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(facultyMember.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(facultyMember.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

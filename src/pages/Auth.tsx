@@ -64,13 +64,13 @@ const Auth = () => {
         <div className="max-w-lg text-center lg:text-left animate-slide-up">
           <div className="flex items-center justify-center lg:justify-start gap-3 mb-6">
             <div className="p-3 bg-primary-foreground/20 rounded-2xl backdrop-blur-sm">
-              <Calendar className="h-8 w-8" />
+              
             </div>
-            <h1 className="text-4xl font-bold">TimetableWise</h1>
+            <h1 className="text-4xl font-bold">Smart Schedule</h1>
           </div>
           
           <h2 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            AI-Powered
+           
             <span className="block bg-gradient-to-r from-accent-light to-secondary-light bg-clip-text text-transparent">
               Timetable Generator
             </span>
