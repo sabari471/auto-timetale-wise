@@ -5,27 +5,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 relative overflow-hidden group",
   {
     variants: {
       variant: {
-        default: "bg-gradient-primary text-primary-foreground shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md hover:shadow-lg",
-        outline: "border border-border bg-background hover:bg-accent hover:text-accent-foreground hover:border-primary/50",
-        secondary: "bg-gradient-secondary text-secondary-foreground shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200",
-        accent: "bg-gradient-accent text-accent-foreground shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200",
-        success: "bg-success text-success-foreground shadow-md hover:bg-success-light hover:shadow-lg",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-gradient-hero text-primary-foreground shadow-xl hover:shadow-glow hover:scale-[1.05] transition-all duration-300 font-semibold",
-        glass: "bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background/90 hover:border-primary/30",
+        default: "bg-gradient-primary text-primary-foreground shadow-professional hover:shadow-professional-lg hover:scale-105 active:scale-95 btn-press",
+        destructive: "bg-gradient-to-r from-destructive to-destructive/80 text-destructive-foreground shadow-professional hover:shadow-professional-lg hover:scale-105 active:scale-95 btn-press",
+        outline: "border-2 border-border bg-background hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 hover:border-primary/50 hover:shadow-professional hover:scale-105 active:scale-95 btn-press",
+        secondary: "bg-gradient-secondary text-secondary-foreground shadow-professional hover:shadow-professional-lg hover:scale-105 active:scale-95 btn-press",
+        accent: "bg-gradient-accent text-accent-foreground shadow-professional hover:shadow-professional-lg hover:scale-105 active:scale-95 btn-press",
+        success: "bg-gradient-to-r from-success to-success/80 text-success-foreground shadow-professional hover:shadow-professional-lg hover:scale-105 active:scale-95 btn-press",
+        ghost: "hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10 hover:text-accent-foreground hover:shadow-professional hover:scale-105 active:scale-95 btn-press",
+        link: "text-primary underline-offset-4 hover:underline hover:text-primary/80",
+        hero: "bg-gradient-hero text-primary-foreground shadow-professional-lg hover:shadow-xl hover:scale-110 active:scale-95 btn-press font-bold animate-pulse-glow",
+        glass: "bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background/90 hover:border-primary/30 hover:shadow-professional hover:scale-105 active:scale-95 btn-press",
       },
       size: {
-        default: "h-11 px-6 py-2.5",
-        sm: "h-9 rounded-md px-4 text-xs",
-        lg: "h-12 rounded-lg px-8 text-base",
-        xl: "h-14 rounded-xl px-10 text-lg",
-        icon: "h-10 w-10",
+        default: "h-12 px-8 py-3",
+        sm: "h-9 rounded-lg px-4 text-xs",
+        lg: "h-14 rounded-xl px-10 text-base",
+        xl: "h-16 rounded-2xl px-12 text-lg",
+        icon: "h-12 w-12",
       },
     },
     defaultVariants: {
@@ -44,7 +44,17 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    return (
+      <Comp 
+        className={cn(buttonVariants({ variant, size, className }))} 
+        ref={ref} 
+        {...props}
+      >
+        {/* Shimmer effect overlay */}
+        <span className="absolute inset-0 -top-px -left-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-300" />
+        {props.children}
+      </Comp>
+    );
   },
 );
 Button.displayName = "Button";

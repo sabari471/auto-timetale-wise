@@ -45,17 +45,6 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     console.log('Generating timetable for:', { academic_year, semester, departments });
 
-    // Clear existing timetables for this academic year and semester
-    const { error: deleteError } = await supabaseClient
-      .from('timetables')
-      .delete()
-      .eq('academic_year', academic_year)
-      .eq('semester', semester);
-
-    if (deleteError) {
-      console.warn('Warning: Could not clear existing timetables:', deleteError.message);
-    }
-
     // Create a new timetable run
     const { data: run, error: runError } = await supabaseClient
       .from('timetable_runs')
@@ -81,8 +70,8 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     // Get all course assignments for the semester
     let assignmentsQuery = supabaseClient
-      .from('course_assignments')
-      .select(`
+      .from('course_assignments') 
+      .select(`    
         *,
         course:courses(*),
         faculty:faculty(*),
@@ -222,17 +211,10 @@ const serve_handler = async (req: Request): Promise<Response> => {
                 run_id: run.id,
                 course_assignment_id: assignment.id,
                 batch_id: assignment.batch_id,
-                faculty_id: assignment.faculty_id,
                 room_id: room.id,
                 day_of_week: day,
                 start_time: slot.start_time,
                 end_time: slot.end_time,
-                academic_year,
-                semester,
-                course_name: assignment.course?.name,
-                batch_name: assignment.batch?.name,
-                faculty_name: assignment.faculty?.name,
-                room_name: room.name
               });
 
               scheduledHours++;

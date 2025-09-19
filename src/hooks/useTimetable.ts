@@ -137,9 +137,12 @@ export const useTimetable = () => {
         throw new Error(data.error || 'Failed to generate timetable');
       }
 
+      const total = data.statistics?.total_assignments ?? 0;
+      const full = data.statistics?.fully_scheduled ?? 0;
+      const slots = data.statistics?.total_slots_created ?? 0;
       toast({
         title: "Success",
-        description: `Timetable generated successfully! ${data.scheduled_count} courses scheduled.`,
+        description: `Generated ${slots} slots. Fully scheduled ${full}/${total} assignments.`,
         variant: "default",
       });
 

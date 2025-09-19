@@ -242,7 +242,7 @@ const Leaves = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Leave Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight gradient-text">Leave Management</h1>
             <p className="text-muted-foreground">
               Manage leave requests and approvals
             </p>
@@ -251,7 +251,7 @@ const Leaves = () => {
           {(profile?.role === 'faculty' || profile?.role === 'admin') && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => { resetForm(); }}>
+                <Button onClick={() => { resetForm(); }} className="btn-press">
                   <Plus className="mr-2 h-4 w-4" />
                   Request Leave
                 </Button>
@@ -346,10 +346,10 @@ const Leaves = () => {
           )}
         </div>
 
-        <Card>
+        <Card className="card-3d shadow-professional-lg animate-slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <Calendar className="h-5 w-5 text-primary" />
               Leave Requests
             </CardTitle>
             <CardDescription>

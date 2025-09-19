@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Bell, Settings, LogOut, Calendar, Users, BookOpen, BarChart3, Clock, Menu, GraduationCap } from 'lucide-react';
+import { Bell, Settings, LogOut, Calendar, Users, BookOpen, BarChart3, Clock, Menu, GraduationCap, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +32,7 @@ const navigation: NavItem[] = [
   { icon: BookOpen, label: 'Courses', href: '/courses', roles: ['admin', 'faculty'] },
   { icon: Users, label: 'Faculty', href: '/faculty', roles: ['admin'] },
   { icon: GraduationCap, label: 'Batches', href: '/batches', roles: ['admin'] },
+  { icon: MapPin, label: 'Rooms', href: '/rooms', roles: ['admin'] },
   { icon: BookOpen, label: 'Assignments', href: '/assignments', roles: ['admin'] },
   { icon: Clock, label: 'Leaves', href: '/leaves', roles: ['admin', 'faculty'] },
   { icon: BarChart3, label: 'Analytics', href: '/analytics', roles: ['admin'] },
@@ -41,6 +42,8 @@ const navigation: NavItem[] = [
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, profile, loading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -93,11 +96,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             {filteredNavigation.map((item) => (
               <Button
                 key={item.href}
-                variant="ghost"
-                className="w-full justify-start gap-3 h-11"
+                variant={location.pathname === item.href ? "default" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3 h-11 transition-all-smooth",
+                  location.pathname === item.href && "bg-primary/10 text-primary shadow-professional"
+                )}
                 onClick={() => {
                   setSidebarOpen(false);
-                  window.location.href = item.href;
+                  navigate(item.href);
                 }}
               >
                 <item.icon className="h-5 w-5" />
