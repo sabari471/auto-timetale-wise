@@ -41,9 +41,9 @@ const Rooms = () => {
     name: '',
     code: '',
     capacity: 30,
-    room_type: 'lecture',
+    room_type: 'classroom',
     facilities: [] as string[],
-    department_id: ''
+    department_id: null as string | null
   });
 
   useEffect(() => {
@@ -92,7 +92,10 @@ const Rooms = () => {
       if (editingRoom) {
         const { error } = await supabase
           .from('rooms')
-          .update(formData)
+          .update({
+            ...formData,
+            department_id: formData.department_id || null
+          })
           .eq('id', editingRoom.id);
 
         if (error) throw error;
@@ -103,7 +106,10 @@ const Rooms = () => {
       } else {
         const { error } = await supabase
           .from('rooms')
-          .insert([formData]);
+          .insert([{
+            ...formData,
+            department_id: formData.department_id || null
+          }]);
 
         if (error) throw error;
         toast({
@@ -133,7 +139,7 @@ const Rooms = () => {
       capacity: room.capacity,
       room_type: room.room_type,
       facilities: room.facilities || [],
-      department_id: ''
+      department_id: room.department_id || null
     });
     setIsDialogOpen(true);
   };
@@ -167,9 +173,9 @@ const Rooms = () => {
       name: '',
       code: '',
       capacity: 30,
-      room_type: 'lecture',
+      room_type: 'classroom',
       facilities: [],
-      department_id: ''
+      department_id: null
     });
   };
 
@@ -264,11 +270,10 @@ const Rooms = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="lecture">Lecture Hall</SelectItem>
+                          <SelectItem value="classroom">Classroom</SelectItem>
                           <SelectItem value="lab">Laboratory</SelectItem>
-                          <SelectItem value="tutorial">Tutorial Room</SelectItem>
                           <SelectItem value="seminar">Seminar Hall</SelectItem>
-                          <SelectItem value="conference">Conference Room</SelectItem>
+                          <SelectItem value="auditorium">Auditorium</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

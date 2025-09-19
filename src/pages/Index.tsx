@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import TimetableGrid from '@/components/timetable/TimetableGrid';
+import ResponsiveTimetable from '@/components/timetable/ResponsiveTimetable';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { useTimetable } from '@/hooks/useTimetable';
@@ -34,7 +35,9 @@ const Index = () => {
     timetables, 
     loading: timetableLoading, 
     generateTimetable,
-    refreshData 
+    refreshData,
+    refreshTimetable,
+    forceRegenerate
   } = useTimetable();
   
   const [todaySchedule, setTodaySchedule] = useState<TodaySchedule[]>([]);
@@ -294,6 +297,15 @@ const Index = () => {
 
         {/* Dashboard Stats */}
         <DashboardStats role={profile?.role || 'student'} />
+
+        {/* Responsive Timetable System */}
+        <ResponsiveTimetable
+          onRefresh={refreshTimetable}
+          onForceRegenerate={forceRegenerate}
+          loading={timetableLoading}
+          lastUpdated={new Date().toISOString()}
+          conflicts={0} // This could be passed from the timetable hook
+        />
 
         {/* Timetable Grid */}
         <TimetableGrid timetables={timetables} loading={timetableLoading} />

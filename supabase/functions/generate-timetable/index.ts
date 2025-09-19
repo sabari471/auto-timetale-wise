@@ -13,22 +13,6 @@ interface TimetableRequest {
   config?: any;
 }
 
-interface TimeSlot {
-  start_time: string;
-  end_time: string;
-}
-
-interface ScheduleSlot {
-  day: number;
-  slot_index: number;
-  start_time: string;
-  end_time: string;
-  batch_id?: number;
-  faculty_id?: number;
-  room_id?: number;
-  assignment_id?: number;
-}
-
 const serve_handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -36,14 +20,15 @@ const serve_handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log('Starting timetable generation...');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { academic_year, semester, departments, config }: TimetableRequest = await req.json();
-
-    console.log('Generating timetable for:', { academic_year, semester, departments });
+    console.log('Request data:', { academic_year, semester, departments });
 
     // Create a new timetable run
     const { data: run, error: runError } = await supabaseClient
@@ -54,22 +39,22 @@ const serve_handler = async (req: Request): Promise<Response> => {
         semester,
         status: 'generating',
         generation_config: config || {
-          algorithm: 'improved_greedy',
-          max_iterations: 500,
-          population_size: 30
+          algorithm: 'greedy',
+          max_iterations: 100
         }
       })
       .select()
       .single();
 
     if (runError) {
+      console.error('Run creation error:', runError);
       throw new Error(`Failed to create timetable run: ${runError.message}`);
     }
 
     console.log('Created timetable run:', run.id);
 
     // Get all course assignments for the semester
-    let assignmentsQuery = supabaseClient
+    const { data: assignments, error: assignmentsError } = await supabaseClient
       .from('course_assignments') 
       .select(`    
         *,
@@ -80,20 +65,16 @@ const serve_handler = async (req: Request): Promise<Response> => {
       .eq('academic_year', academic_year)
       .eq('semester', semester);
 
-    // Filter by departments if specified
-    if (departments && departments.length > 0) {
-      assignmentsQuery = assignmentsQuery.in('department', departments);
-    }
-
-    const { data: assignments, error: assignmentsError } = await assignmentsQuery;
-
     if (assignmentsError) {
+      console.error('Assignments error:', assignmentsError);
       throw new Error(`Failed to fetch assignments: ${assignmentsError.message}`);
     }
 
     if (!assignments || assignments.length === 0) {
       throw new Error('No course assignments found for the specified criteria');
     }
+
+    console.log(`Found ${assignments.length} assignments`);
 
     // Get available rooms
     const { data: rooms, error: roomsError } = await supabaseClient
@@ -102,6 +83,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
       .eq('is_active', true);
 
     if (roomsError) {
+      console.error('Rooms error:', roomsError);
       throw new Error(`Failed to fetch rooms: ${roomsError.message}`);
     }
 
@@ -109,15 +91,16 @@ const serve_handler = async (req: Request): Promise<Response> => {
       throw new Error('No active rooms found');
     }
 
-    console.log(`Processing ${assignments.length} assignments with ${rooms.length} rooms`);
+    console.log(`Found ${rooms.length} rooms`);
 
-    // Define time slots
-    const timeSlots: TimeSlot[] = [
+    // Define time slots (9 AM to 6 PM, 1 hour each)
+    const timeSlots = [
       { start_time: '09:00:00', end_time: '10:00:00' },
       { start_time: '10:00:00', end_time: '11:00:00' },
       { start_time: '11:00:00', end_time: '12:00:00' },
       { start_time: '12:00:00', end_time: '13:00:00' },
-      { start_time: '14:00:00', end_time: '15:00:00' }, 
+      { start_time: '13:00:00', end_time: '14:00:00' },
+      { start_time: '14:00:00', end_time: '15:00:00' },
       { start_time: '15:00:00', end_time: '16:00:00' },
       { start_time: '16:00:00', end_time: '17:00:00' },
       { start_time: '17:00:00', end_time: '18:00:00' },
@@ -125,115 +108,61 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     const days = [1, 2, 3, 4, 5]; // Monday to Friday
     
-    // Initialize schedule grid
-    const scheduleGrid: ScheduleSlot[][][] = [];
-    for (let day = 0; day < days.length; day++) {
-      scheduleGrid[day] = [];
-      for (let slot = 0; slot < timeSlots.length; slot++) {
-        scheduleGrid[day][slot] = [];
-      }
-    }
-
-    // Helper function to check if a slot is available
-    const isSlotAvailable = (day: number, slotIndex: number, batchId: number, facultyId: number, roomId: number): boolean => {
-      const daySlots = scheduleGrid[day][slotIndex];
-      
-      // Check batch conflict
-      if (daySlots.some(s => s.batch_id === batchId)) return false;
-      
-      // Check faculty conflict
-      if (daySlots.some(s => s.faculty_id === facultyId)) return false;
-      
-      // Check room conflict
-      if (daySlots.some(s => s.room_id === roomId)) return false;
-      
-      return true;
-    };
-
-    // Helper function to find suitable room
-    const findSuitableRoom = (day: number, slotIndex: number, requiredCapacity: number): any => {
-      return rooms.find(room => {
-        // Check capacity
-        if (room.capacity < requiredCapacity) return false;
-        
-        // Check availability
-        return !scheduleGrid[day][slotIndex].some(s => s.room_id === room.id);
-      });
-    };
-
-    // Sort assignments by priority (fewer available slots first)
-    const sortedAssignments = [...assignments].sort((a, b) => {
-      const hoursA = a.hours_per_week || 3;
-      const hoursB = b.hours_per_week || 3;
-      return hoursB - hoursA; // More hours first
-    });
-
+    // Simple scheduling algorithm
     const finalSchedule: any[] = [];
-    let totalScheduled = 0;
-    let totalFailed = 0;
+    let scheduledCount = 0;
 
-    // Generate timetable for each assignment
-    for (const assignment of sortedAssignments) {
+    for (const assignment of assignments) {
       const requiredHours = assignment.hours_per_week || 3;
-      const requiredCapacity = (assignment.batch?.student_count || 30) + 5; // Add buffer
-      let scheduledHours = 0;
+      const requiredCapacity = (assignment.batch?.student_count || 30) + 5;
+      
+      console.log(`Scheduling: ${assignment.course?.name} for ${assignment.batch?.name} (${requiredHours} hours)`);
 
-      console.log(`Scheduling: ${assignment.course?.name} for ${assignment.batch?.name} (${requiredHours} hours needed)`);
+      let scheduledHours = 0;
+      
+      // Find a suitable room
+      const suitableRoom = rooms.find(room => room.capacity >= requiredCapacity);
+      if (!suitableRoom) {
+        console.log(`No suitable room found for ${assignment.course?.name}`);
+        continue;
+      }
 
       // Try to schedule required hours
-      for (let attempt = 0; attempt < requiredHours * 2 && scheduledHours < requiredHours; attempt++) {
-        let scheduled = false;
+      for (let hour = 0; hour < requiredHours && scheduledHours < requiredHours; hour++) {
+        const dayIndex = hour % days.length;
+        const timeSlotIndex = Math.floor(hour / days.length) % timeSlots.length;
+        
+        const day = days[dayIndex];
+        const timeSlot = timeSlots[timeSlotIndex];
 
-        for (let dayIndex = 0; dayIndex < days.length && !scheduled; dayIndex++) {
-          for (let slotIndex = 0; slotIndex < timeSlots.length && !scheduled; slotIndex++) {
-            const day = days[dayIndex];
-            const slot = timeSlots[slotIndex];
+        // Check if this slot is already taken
+        const isSlotTaken = finalSchedule.some(schedule => 
+          schedule.day_of_week === day && 
+          schedule.start_time === timeSlot.start_time &&
+          (schedule.batch_id === assignment.batch_id || 
+           schedule.course_assignment_id === assignment.course_assignment_id)
+        );
 
-            // Find suitable room
-            const room = findSuitableRoom(dayIndex, slotIndex, requiredCapacity);
-            
-            if (room && isSlotAvailable(dayIndex, slotIndex, assignment.batch_id, assignment.faculty_id, room.id)) {
-              // Schedule this slot
-              const scheduleSlot: ScheduleSlot = {
-                day,
-                slot_index: slotIndex,
-                start_time: slot.start_time,
-                end_time: slot.end_time,
-                batch_id: assignment.batch_id,
-                faculty_id: assignment.faculty_id,
-                room_id: room.id,
-                assignment_id: assignment.id
-              };
+        if (!isSlotTaken) {
+          finalSchedule.push({
+            run_id: run.id,
+            course_assignment_id: assignment.id,
+            batch_id: assignment.batch_id,
+            room_id: suitableRoom.id,
+            day_of_week: day,
+            start_time: timeSlot.start_time,
+            end_time: timeSlot.end_time,
+          });
 
-              scheduleGrid[dayIndex][slotIndex].push(scheduleSlot);
-
-              finalSchedule.push({
-                run_id: run.id,
-                course_assignment_id: assignment.id,
-                batch_id: assignment.batch_id,
-                room_id: room.id,
-                day_of_week: day,
-                start_time: slot.start_time,
-                end_time: slot.end_time,
-              });
-
-              scheduledHours++;
-              scheduled = true;
-              
-              console.log(`✓ Scheduled: ${assignment.course?.name} - Day ${day}, ${slot.start_time}-${slot.end_time}, Room: ${room.name}`);
-            }
-          }
+          scheduledHours++;
+          scheduledCount++;
+          
+          console.log(`✓ Scheduled: ${assignment.course?.name} - Day ${day}, ${timeSlot.start_time}-${timeSlot.end_time}, Room: ${suitableRoom.name}`);
         }
       }
-
-      if (scheduledHours >= requiredHours) {
-        totalScheduled++;
-        console.log(`✓ Fully scheduled: ${assignment.course?.name} (${scheduledHours}/${requiredHours} hours)`);
-      } else {
-        totalFailed++;
-        console.log(`⚠ Partially scheduled: ${assignment.course?.name} (${scheduledHours}/${requiredHours} hours)`);
-      }
     }
+
+    console.log(`Generated ${finalSchedule.length} timetable entries`);
 
     // Insert generated timetable
     if (finalSchedule.length > 0) {
@@ -242,37 +171,25 @@ const serve_handler = async (req: Request): Promise<Response> => {
         .insert(finalSchedule);
 
       if (insertError) {
-        console.error('Insert error details:', insertError);
+        console.error('Insert error:', insertError);
         throw new Error(`Failed to insert timetable: ${insertError.message}`);
       }
 
       console.log(`Successfully inserted ${finalSchedule.length} timetable entries`);
     }
 
-    // Update timetable run status
-    const completionLog = {
-      total_assignments: assignments.length,
-      fully_scheduled: totalScheduled,
-      partially_scheduled: totalFailed,
-      total_slots_created: finalSchedule.length,
-      generation_timestamp: new Date().toISOString()
-    };
-
+    // Update run status to completed
     const { error: updateError } = await supabaseClient
       .from('timetable_runs')
-      .update({
+      .update({ 
         status: 'completed',
-        completed_at: new Date().toISOString(),
-        generation_log: JSON.stringify(completionLog)
+        completed_at: new Date().toISOString()
       })
       .eq('id', run.id);
 
     if (updateError) {
-      console.error('Failed to update run status:', updateError);
+      console.error('Update error:', updateError);
     }
-
-    console.log(`Timetable generation completed. Run ID: ${run.id}`);
-    console.log(`Stats: ${totalScheduled} fully scheduled, ${totalFailed} partial/failed, ${finalSchedule.length} total slots`);
 
     return new Response(
       JSON.stringify({
@@ -280,11 +197,11 @@ const serve_handler = async (req: Request): Promise<Response> => {
         run_id: run.id,
         statistics: {
           total_assignments: assignments.length,
-          fully_scheduled: totalScheduled,
-          partially_scheduled: totalFailed,
+          fully_scheduled: scheduledCount,
+          partially_scheduled: assignments.length - scheduledCount,
           total_slots_created: finalSchedule.length
         },
-        message: `Generated timetable with ${finalSchedule.length} scheduled slots. ${totalScheduled}/${assignments.length} assignments fully scheduled.`
+        message: `Generated timetable with ${finalSchedule.length} scheduled slots. ${scheduledCount}/${assignments.length} assignments scheduled.`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -294,15 +211,12 @@ const serve_handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in generate-timetable function:', error);
     
-    // Try to update run status to failed if we have a run
-    const errorResponse = {
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    };
-
     return new Response(
-      JSON.stringify(errorResponse),
+      JSON.stringify({
+        success: false,
+        error: error.message || 'Unknown error occurred',
+        timestamp: new Date().toISOString()
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

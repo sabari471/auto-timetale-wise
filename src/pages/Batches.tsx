@@ -22,6 +22,7 @@ interface Batch {
   semester: number;
   year: number;
   is_active: boolean;
+  department_id?: string | null;
 }
 
 interface Department {
@@ -43,7 +44,7 @@ const Batches = () => {
     student_count: 0,
     semester: 1,
     year: new Date().getFullYear(),
-    department_id: ''
+    department_id: null as string | null
   });
 
   useEffect(() => {
@@ -60,10 +61,10 @@ const Batches = () => {
 
       if (error) throw error;
       setBatches(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: "Failed to fetch batches",
+        description: error instanceof Error ? error.message : "Failed to fetch batches",
         variant: "destructive",
       });
     } finally {
@@ -80,7 +81,7 @@ const Batches = () => {
 
       if (error) throw error;
       setDepartments(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching departments:', error);
     }
   };
@@ -92,7 +93,10 @@ const Batches = () => {
       if (editingBatch) {
         const { error } = await supabase
           .from('batches')
-          .update(formData)
+          .update({
+            ...formData,
+            department_id: formData.department_id || null
+          })
           .eq('id', editingBatch.id);
 
         if (error) throw error;
@@ -103,7 +107,10 @@ const Batches = () => {
       } else {
         const { error } = await supabase
           .from('batches')
-          .insert([formData]);
+          .insert([{
+            ...formData,
+            department_id: formData.department_id || null
+          }]);
 
         if (error) throw error;
         toast({
@@ -116,10 +123,10 @@ const Batches = () => {
       setEditingBatch(null);
       resetForm();
       fetchBatches();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save batch",
+        description: error instanceof Error ? error.message : "Failed to save batch",
         variant: "destructive",
       });
     }
@@ -133,7 +140,7 @@ const Batches = () => {
       student_count: batch.student_count,
       semester: batch.semester,
       year: batch.year,
-      department_id: ''
+      department_id: batch.department_id || null
     });
     setIsDialogOpen(true);
   };
@@ -153,10 +160,10 @@ const Batches = () => {
         description: "Batch deleted successfully",
       });
       fetchBatches();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete batch",
+        description: error instanceof Error ? error.message : "Failed to delete batch",
         variant: "destructive",
       });
     }
@@ -169,7 +176,7 @@ const Batches = () => {
       student_count: 0,
       semester: 1,
       year: new Date().getFullYear(),
-      department_id: ''
+      department_id: null
     });
   };
 
