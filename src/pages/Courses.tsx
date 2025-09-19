@@ -45,7 +45,7 @@ const Courses = () => {
     course_type: 'theory',
     duration_minutes: 60,
     semester: 1,
-    department_id: ''
+     department_id: null as string | null,
   });
 
   useEffect(() => {
@@ -173,7 +173,7 @@ const Courses = () => {
       course_type: 'theory',
       duration_minutes: 60,
       semester: 1,
-      department_id: ''
+      department_id: null, 
     });
   };
 
@@ -297,6 +297,27 @@ const Courses = () => {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+  <Label htmlFor="department">Department</Label>
+  <Select
+    value={formData.department_id ?? ''}
+    onValueChange={(value) =>
+      setFormData((prev) => ({ ...prev, department_id: value }))
+    }
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select a department" />
+    </SelectTrigger>
+    <SelectContent>
+      {departments.map((dept) => (
+        <SelectItem key={dept.id} value={dept.id}>
+          {dept.name} ({dept.code})
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+
 
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
