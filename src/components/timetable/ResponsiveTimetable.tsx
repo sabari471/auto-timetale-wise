@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,6 @@ const ResponsiveTimetable: React.FC<ResponsiveTimetableProps> = ({
   conflicts = 0
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -47,39 +46,25 @@ const ResponsiveTimetable: React.FC<ResponsiveTimetableProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <RefreshCw className={cn(
-                "h-5 w-5 text-blue-600",
-                (loading || isRefreshing) && "animate-spin"
-              )} />
+              <RefreshCw
+                className={cn(
+                  "h-5 w-5 text-blue-600",
+                  (loading || isRefreshing) && "animate-spin"
+                )}
+              />
             </div>
             <div>
               <CardTitle className="text-lg font-semibold text-gray-900">
                 Responsive Timetable System
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">
-                Automatically updates when data changes
+                Update and regenerate timetable manually
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant={autoRefreshEnabled ? "default" : "secondary"}
-              className={cn(
-                "flex items-center gap-1",
-                autoRefreshEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-              )}
-            >
-              <div className={cn(
-                "w-2 h-2 rounded-full",
-                autoRefreshEnabled ? "bg-green-500 animate-pulse" : "bg-gray-400"
-              )} />
-              Auto-refresh
-            </Badge>
-          </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Status Card */}
@@ -129,13 +114,15 @@ const ResponsiveTimetable: React.FC<ResponsiveTimetableProps> = ({
                   variant="outline"
                   className="w-full"
                 >
-                  <RefreshCw className={cn(
-                    "h-4 w-4 mr-2",
-                    (loading || isRefreshing) && "animate-spin"
-                  )} />
+                  <RefreshCw
+                    className={cn(
+                      "h-4 w-4 mr-2",
+                      (loading || isRefreshing) && "animate-spin"
+                    )}
+                  />
                   Refresh Now
                 </Button>
-                
+
                 <Button
                   onClick={handleForceRegenerate}
                   disabled={loading || isRefreshing}
@@ -143,29 +130,17 @@ const ResponsiveTimetable: React.FC<ResponsiveTimetableProps> = ({
                   variant="default"
                   className="w-full"
                 >
-                  <RefreshCw className={cn(
-                    "h-4 w-4 mr-2",
-                    (loading || isRefreshing) && "animate-spin"
-                  )} />
+                  <RefreshCw
+                    className={cn(
+                      "h-4 w-4 mr-2",
+                      (loading || isRefreshing) && "animate-spin"
+                    )}
+                  />
                   Force Regenerate
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Auto-refresh Info */}
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <div className="flex items-start gap-2">
-            <RefreshCw className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium">Automatic Updates</p>
-              <p className="text-blue-700">
-                The system automatically checks for changes in faculty, courses, assignments, rooms, and batches every 30 seconds. 
-                When changes are detected, the timetable regenerates automatically to maintain accuracy.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Conflict Resolution Info */}

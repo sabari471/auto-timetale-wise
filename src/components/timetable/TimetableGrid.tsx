@@ -47,9 +47,7 @@ const TimetableGrid = ({ timetables, loading }: TimetableGridProps) => {
     { start_time: '13:15:00', end_time: '14:00:00', type: 'lunch' },
     { start_time: '14:00:00', end_time: '15:00:00', type: 'class' },
     { start_time: '15:00:00', end_time: '15:15:00', type: 'break' },
-    { start_time: '15:15:00', end_time: '16:15:00', type: 'class' },
-    { start_time: '16:15:00', end_time: '16:30:00', type: 'break' },
-    { start_time: '16:30:00', end_time: '17:30:00', type: 'class' }
+    { start_time: '15:15:00', end_time: '16:15:00', type: 'class' }
   ];
 
   const getTimetableForSlot = (day: number, time: string) => {
